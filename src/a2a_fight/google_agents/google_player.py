@@ -37,14 +37,14 @@ from a2a.types import (
 import asyncio
 import threading
 import time
+from dotenv import load_dotenv
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def start_google_server_with_executor(host, port:int)-> None:
-
-    os.environ["GOOGLE_API_KEY"] = "AIzaSyB0-4h2rhJP-E-IJYqfu7Q64KikchtTJIk"
+    load_dotenv()
     session_service = InMemorySessionService()
     APP_NAME = "game_app"
     USER_ID = "user_1"
