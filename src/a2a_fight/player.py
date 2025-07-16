@@ -31,7 +31,7 @@ from a2a.types import (
 import asyncio
 import threading
 
-def start_server_with_executor(host, port:int)-> None:
+async def start_server_with_executor(host, port:int)-> None:
 
     class MoveType(str, Enum):
         Rock = "Rock"
@@ -91,7 +91,10 @@ def start_server_with_executor(host, port:int)-> None:
         agent_card=public_agent_card,
         http_handler=request_handler,
     )
-    uvicorn.run(server.build(), host=host, port=port)
+    config = uvicorn.Config(server.build(), host=host, port=port, log_level="info", lifespan="off")
+    server = uvicorn.Server(config)
+    await server.serve()
+    # uvicorn.run(server.build(), host=host, port=port)
 
 
 async def interact_with_agent(host, port:int)-> None:
@@ -164,28 +167,40 @@ async def interact_with_agent(host, port:int)-> None:
 
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", default="8001", type=int)
     args = parser.parse_args()
 
-    # start_server_with_executor(args.host, args.port)
+    asyncio.create_task(start_server_with_executor(args.host, args.port))
 
-    # 啟動 server 用 thread
-    server_thread = threading.Thread(target=start_server_with_executor, args=(args.host, args.port))
-    server_thread.start()
+    # # 啟動 server 用 thread
+    # server_thread = threading.Thread(target=start_server_with_executor, args=(args.host, args.port))
+    # server_thread.start()
 
     # 等一下讓 server 啟動完成
     import time
     time.sleep(1)
-    
-    asyncio.run(interact_with_agent(args.host, args.port))
+
+
+    await asyncio.sleep(5)
+    #等client完成才算完成 所以要await他
+    await interact_with_agent(args.host, args.port)
 
 
 
 if __name__ == '__main__':
-    main()
+
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--host", default="localhost")
+    # parser.add_argument("--port", default="8001", type=int)
+    # args = parser.parse_args()
+
+    # loop = asyncio.get_running_loop()
+    # loop.create_task(start_server_with_executor(args.host, args.port)) 
+
+    asyncio.run(main())
 
 
     
