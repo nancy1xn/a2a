@@ -20,6 +20,7 @@ from typing import Any
 from uuid import uuid4
 
 import httpx
+import json
 
 from a2a.client import A2ACardResolver, A2AClient
 from a2a.types import (
@@ -30,6 +31,10 @@ from a2a.types import (
 )
 import asyncio
 import threading
+from pydantic import BaseModel
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+from openai import OpenAI
 
 async def start_server_with_executor(host, port:int)-> None:
 
@@ -37,12 +42,73 @@ async def start_server_with_executor(host, port:int)-> None:
         Rock = "Rock"
         Paper = "Paper"
         Scissor = "Scissor"
-
+    
     class PlayerAgent:
         """Rock Paper Scissor Agent."""
+        async def invoke(self) -> str:
+            client = OpenAI()
 
-        async def invoke(self) -> MoveType:
-            return random.choice(list(MoveType))
+            tools = [{
+                "type": "function",
+                "name": "make_move",
+                "description": "Play Rock, Paper, Scissor by randomly choosing and returning one of the move from Movetype.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "move": {
+                            "type": ["string", "null"],
+                            "enum": ["Rock", "Paper", "Scissor"],
+                            "description": "Movetype will be returned in."
+                        }
+                    },
+                        "required": [
+                        "move"
+                        ],
+                    "additionalProperties": False
+                },
+                "strict": True
+            }]
+
+            input_messages = [{"role": "user", "content": "Rock Paper Scissor!"}]
+
+            response = client.responses.create(
+                model="gpt-4.1",
+                input=input_messages,
+                tools=tools,
+            )
+            json_response =json.loads(response.output[0].arguments)
+            return json_response["move"]
+
+    # version1
+    #class MoveType(str, Enum):
+    #    Rock = "Rock"
+    #    Paper = "Paper"
+    #    Scissor = "Scissor"
+    # class PlayerAgent:
+    #     """Rock Paper Scissor Agent."""
+
+    #     async def invoke(self) -> MoveType:
+    #         return random.choice(list(MoveType))
+
+    # version2 
+    # class Move(BaseModel):
+    #     move: MoveType
+  
+    # class PlayerAgent:
+    #     """Rock Paper Scissor Agent."""
+    #     async def invoke(self) -> MoveType:
+    #         model = ChatOpenAI(model="gpt-4o", temperature=0.7)
+    #         structured_model = model.with_structured_output(Move)
+    #         system = """You are a player that play Rock, Paper, Scissor. Please randomly choose and return one of the move from Movetype without any other word.
+    #                     DO NOT CHOOSE THE SAME MOVE EVERYTIME. For example: (1)"Rock" (2)"Paper" """
+    #         llm_response = structured_model.invoke(
+    #         [
+    #             SystemMessage(content=system),
+    #             HumanMessage(content="Rock, Paper, Scissor, please show your move randomly and change each time."),
+    #             ]
+    #         )
+    #         return llm_response.move
+
 
     class PlayerAgentExecutor(AgentExecutor):
         """Test AgentProxy Implementation."""
